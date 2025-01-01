@@ -8,6 +8,7 @@ require('dotenv').config();
 const User = require('../models/user');
 const { sendOTP } = require('../utils/nodemailer')
 const authenticateAdmin = require('./authenticateUser');
+const ensureDashboardExists = require('./ensuredashboardexist')
 
 
 const router = express.Router();
@@ -19,13 +20,25 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // Endpoint for user signup
 router.post('/signup', async (req, res) => {
-    const { password, email } = req.body;
+    const { password, email, role, confirmPassword}=req.body
+
+     // Only admins can sign up, regular users will be restricted
+  if (role !== 'admin') {
+    return res.status(403).json({ status: 'error', msg: 'Restricted access. Only admins can sign up.' });
+  }
 
     // Check if any required field is missing
-    if (!password || !email ) {
-        return res.status(400).json({ status: "error", msg: "Fill in your details" });
+    if (!password || !confirmPassword || !email || !role)
+        return res.status(400).json({ status: "error", msg: "Fill in all fields correctly" });
+    
+
+     // Check if password and confirm password match
+     if (password !== confirmPassword) {
+        return res.status(400).json({ status: "error", msg: "Password and confirm password do not match" });
     }
 
+    
+    
     // Validate password
     if (!passwordRegex.test(password)) {
         return res.status(400).json({
@@ -33,7 +46,7 @@ router.post('/signup', async (req, res) => {
             msg: "Password must be at least 8 characters long, contain at least one uppercase letter, one digit, and one special character."
         });
     }
-
+    
     // Validate email
     if (!emailRegex.test(email)) {
         return res.status(400).json({
@@ -42,13 +55,27 @@ router.post('/signup', async (req, res) => {
         });
     }
 
+    // Validate role
+        if (!['admin', 'regular'].includes(role)) {
+        return res.status(400).json({ status: 'error', msg: 'Invalid role' });
+        }
+    
     try {
         // Check if email has been used to create an account before
         const found = await User.findOne({ email }).lean();
         if (found) {
             return res.status(400).json({ status: 'error', msg: `User with this email: ${email} already exists` });
-        }
+        } 
 
+            // Check the current number of admins in the database
+            const adminCount = await User.countDocuments({ role: 'admin' });
+    
+            // If trying to sign up as an admin and there are already 2 admins
+            if (role === 'admin' && adminCount >= 2) {
+                return res.status(400).json({ status: 'error', msg: 'restricted access.'});//  two admins can sign up only
+            }
+    
+ 
         // Hash the password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -56,6 +83,7 @@ router.post('/signup', async (req, res) => {
         const newAdmin = new User({
             email,
             password: hashedPassword,
+            role: 'admin' // only admin can signup
         });
 
         await newAdmin.save();
@@ -68,7 +96,7 @@ router.post('/signup', async (req, res) => {
 
 // Endpoint for user to log in
 
-router.post('/login', authenticateAdmin ,async (req, res) => {
+router.post('/login',async (req, res) => {
     const { email, password } = req.body;
 
     // Check if any required field is missing
@@ -95,7 +123,7 @@ router.post('/login', authenticateAdmin ,async (req, res) => {
     try {
         // Check if user with that email exists in the database
         const Admin = await User.findOne({ email });
-        if (!Admin) {
+        if (!Admin || Admin.role !=='admin') {
             return res.status(400).json({ status: 'error', msg: 'Incorrect email or password' });
         }
 
@@ -107,7 +135,7 @@ router.post('/login', authenticateAdmin ,async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { _id: Admin._id, email: Admin.email },
+            { _id: Admin._id, email: Admin.email, role: Admin.role },
             process.env.JWT_SECRET,
             { expiresIn: '30m' }
         );
@@ -116,12 +144,18 @@ router.post('/login', authenticateAdmin ,async (req, res) => {
         Admin.is_online = true;
         await Admin.save();
 
+         // Ensure dashboard exists after login
+      
+    req.user = { id: user._id }; // Set `req.user` to simulate authenticated user context
+    await ensureDashboardExists(req, res, () => {});
+
+
         // Send user data without the password
-        const { password: userPassword, ...userWithoutPassword } = user.toObject();
+        const { password: userPassword, ...userWithoutPassword } = Admin.toObject();
 
         res.status(200).json({
             status: 'success',
-            msg: 'You have successfully logged in',
+            msg: 'You have successfully logged in as admin',
             user: userWithoutPassword,
             token
         });
@@ -236,20 +270,35 @@ router.post('/reset-password/:token', async (req, res) => {
   }
 });
 
-// Endpoint for user to log out
+// Logout Endpoint
 router.post('/logout', authenticateAdmin, async (req, res) => {
     try {
-        // Mark the user as logged out in the database
-        await User.findByIdAndUpdate(req.userId, { is_online: false });
-
-        // Response
-        res.status(200).json({ status: 'success', msg: 'You have successfully logged out' });
+      // Ensure the token is available in the request
+      const token = req.header('Authorization')?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ status: 'error', msg: 'No token provided.' });
+      }
+  
+      // Ensure the authenticated user exists and is an admin
+      const user = req.user; // Attach the user from the middleware
+      if (!user) {
+        return res.status(401).json({ status: 'error', msg: 'User not authenticated.' });
+      }
+  
+      // Filter out the current token from the user's tokens array
+      user.tokens = user.tokens.filter((t) => t.token !== token);
+  
+      // Mark the user as offline
+      user.is_online = false;
+  
+      // Save the updated user to the database
+      await user.save();
+  
+      res.status(200).json({ status: 'success', msg: 'You have successfully logged out.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ status: 'error', msg: error.message });
+      console.error('Logout error:', error);
+      res.status(500).json({ status: 'error', msg: 'Internal server error.' });
     }
-});
-
-
+  });      
 
 module.exports = router;

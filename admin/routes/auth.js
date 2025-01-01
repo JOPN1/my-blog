@@ -146,8 +146,8 @@ router.post('/login',async (req, res) => {
 
          // Ensure dashboard exists after login
       
-    req.user = { id: user._id }; // Set `req.user` to simulate authenticated user context
-    await ensureDashboardExists(req, res, () => {});
+    // req.user = { id: user._id }; // Set `req.user` to simulate authenticated user context
+    // await ensureDashboardExists(req, res, () => {});
 
 
         // Send user data without the password

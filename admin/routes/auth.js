@@ -111,7 +111,7 @@ router.post('/login',async (req, res) => {
     try {
         // Check if user with that email exists in the database
         const Admin = await User.findOne({ email });
-        if (!Admin || Admin.role !=='admin') {
+        if (!Admin) {
             return res.status(400).json({ status: 'error', msg: 'Incorrect email or password' });
         }
 

@@ -44,6 +44,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/auth", require('./admin/routes/auth'));
 app.use("/comment", require('./admin/routes/comment'));
 app.use("/post", require('./admin/routes/post'));
+app.use("/dashboard", require('./admin/routes/dashboard'));
+app.use("/ensuredashboardexist", require('./admin/routes/ensuredashboardexist'));
+app.use("/authenticateUser", require('./admin/routes/authenticateUser'));
 
 const PORT = process.env.PORT || 2670
 

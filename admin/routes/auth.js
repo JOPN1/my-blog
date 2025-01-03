@@ -20,15 +20,10 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // Endpoint for user signup
 router.post('/signup', async (req, res) => {
-    const { password, email, role, confirmPassword}=req.body
-
-     // Only admins can sign up, regular users will be restricted
-  if (role !== 'admin') {
-    return res.status(403).json({ status: 'error', msg: 'Restricted access. Only admins can sign up.' });
-  }
+    const { password, email, confirmPassword}=req.body
 
     // Check if any required field is missing
-    if (!password || !confirmPassword || !email || !role)
+    if (!password || !confirmPassword || !email )
         return res.status(400).json({ status: "error", msg: "Fill in all fields correctly" });
     
 
@@ -54,12 +49,6 @@ router.post('/signup', async (req, res) => {
             msg: "Invalid email format."
         });
     }
-
-    // Validate role
-        if (!['admin', 'regular'].includes(role)) {
-        return res.status(400).json({ status: 'error', msg: 'Invalid role' });
-        }
-    
     try {
         // Check if email has been used to create an account before
         const found = await User.findOne({ email }).lean();
@@ -68,11 +57,11 @@ router.post('/signup', async (req, res) => {
         } 
 
             // Check the current number of admins in the database
-            const adminCount = await User.countDocuments({ role: 'admin' });
+            const adminCount = await User.countDocuments({ email });
     
             // If trying to sign up as an admin and there are already 2 admins
-            if (role === 'admin' && adminCount >= 2) {
-                return res.status(400).json({ status: 'error', msg: 'restricted access.'});//  two admins can sign up only
+            if ( email >= 2) {
+                return res.status(400).json({ status: 'error', msg: 'restricted access you are not admin.'});//  two admins can sign up only
             }
     
  
@@ -83,7 +72,6 @@ router.post('/signup', async (req, res) => {
         const newAdmin = new User({
             email,
             password: hashedPassword,
-            role: 'admin' // only admin can signup
         });
 
         await newAdmin.save();
@@ -146,8 +134,8 @@ router.post('/login',async (req, res) => {
 
          // Ensure dashboard exists after login
       
-    // req.user = { id: user._id }; // Set `req.user` to simulate authenticated user context
-    // await ensureDashboardExists(req, res, () => {});
+    req.user = { id: Admin._id }; // Set `req.user` to simulate authenticated user context
+    await ensureDashboardExists(req, res, () => {});
 
 
         // Send user data without the password

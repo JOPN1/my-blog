@@ -2,8 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const Post = require ('../models/post')
 const upload = require('../utils/multer')
-const authenticateAdmin = require('../routes/authenticateUser')
-const user = require('../models/user')
+const authenticateAdmin = require('../routes/authenticateUser') 
 
 const router = express.Router()
 
@@ -36,7 +35,7 @@ router.post('/blogPost', authenticateAdmin ,upload.fields([{ name: 'image' }, { 
     }
 
     try {
-      const newPost = new Post({ title, description, image, video, category: category.toLowerCase(), createdBy: req.user._id });
+      const newPost = new Post({ title, description, image, video, category: category.toLowerCase(), createdBy: req.User._id });
       await newPost.save();
       res.status(201).json({ message: 'Blog post created successfully', post: newPost });
     } catch (error) {

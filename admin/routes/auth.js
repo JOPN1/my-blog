@@ -146,7 +146,7 @@ router.post('/login',async (req, res) => {
         userId: Admin._id,
         posts: 0, // Default value
         comments: 0, // Default value
-        lastUpdated: null, // Default value
+        lastUpdated:null, // Default value
       });
       await dashboard.save();
     }

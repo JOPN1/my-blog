@@ -5,12 +5,13 @@ const express = require('express');
 const router = express.Router();
 const authenticateAdmin = require('../routes/authenticateUser');
 
+const ensureDashboardExists = require('../routes/ensuredashboardexist')
 /**
  * POST Update Server-Wide Dashboard Statistics
  * @route POST /api/admin/dashboard/update
  * @description Updates the server-wide total posts and comments statistics
  */
-router.post('/dashboard/update', authenticateAdmin, async (req, res) => {
+router.post('/dashboard/update', authenticateAdmin, ensureDashboardExists, async (req, res) => {
   try {
     const [postCount, commentCount] = await Promise.all([
       Post.countDocuments(),

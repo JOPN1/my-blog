@@ -3,18 +3,15 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
     email: {
       type: String,
-      required: true,
       unique: true
     },
     password: {
       type: String,
-      required: true,
-      minlength: 8
+      required: true
     },
 
     confirmPassword:{
-      type: String,
-      minlength: 8
+      type: String
     },
     
   otp: String,

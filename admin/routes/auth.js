@@ -57,13 +57,16 @@ router.post('/signup', async (req, res) => {
             return res.status(400).json({ status: 'error', msg: `User with this email: ${email} already exists` });
         } 
 
-            // Check the current number of admins in the database
-            const adminCount = await User.countDocuments({ email });
-    
-            // If trying to sign up as an admin and there are already 2 admins
-            if ( email >= 2) {
-                return res.status(400).json({ status: 'error', msg: 'restricted access you are not admin.'});//  two admins can sign up only
-            }
+           // Restrict admin signups based on the ADMIN_EMAILS list
+    if (ADMIN_EMAILS.includes(email)) {
+        const adminCount = await User.countDocuments({ email: { $in: ADMIN_EMAILS } });
+        if (adminCount >= 2) {
+          return res.status(400).json({
+            status: 'error',
+            msg: 'Restricted access: only 2 admins are allowed.',
+          });
+        }
+      }
     
  
         // Hash the password before saving

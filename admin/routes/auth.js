@@ -9,6 +9,7 @@ const User = require('../models/user');
 const { sendOTP } = require('../utils/nodemailer')
 const authenticateAdmin = require('./authenticateUser');
 const ensureDashboardExists = require('./ensuredashboardexist')
+const Dashboard = require('../models/dashboard')
 
 
 const router = express.Router();
@@ -74,6 +75,12 @@ router.post('/signup', async (req, res) => {
             password: hashedPassword,
         });
 
+
+    // Automatically create a dashboard for the new user
+    await Dashboard.create({
+        userId: newAdmin._id,
+      });
+
         await newAdmin.save();
         res.status(201).json({ msg: 'You signed up successfully' });
     } catch (error) {
@@ -132,10 +139,18 @@ router.post('/login',async (req, res) => {
         Admin.is_online = true;
         await Admin.save();
 
-         // Ensure dashboard exists after login
-      
-    req.user = { id: Admin._id }; // Set `req.user` to simulate authenticated user context
-    await ensureDashboardExists(req, res, () => {});
+          // Step 3: Ensure the dashboard exists
+    let dashboard = await Dashboard.findOne({ userId: Admin._id });
+    if (!dashboard) {
+      dashboard = new Dashboard({
+        userId: Admin._id,
+        posts: 0, // Default value
+        comments: 0, // Default value
+        lastUpdated: null, // Default value
+      });
+      await dashboard.save();
+    }
+
 
 
         // Send user data without the password
@@ -147,6 +162,7 @@ router.post('/login',async (req, res) => {
             user: userWithoutPassword,
             token
         });
+   
 
     } catch (error) {
         console.error(error);

@@ -1,32 +1,35 @@
-const AdminDashboard = require('../routes/dashboard'); // Assuming AdminDashboard model exists
+const Dashboard = require('../models/dashboard');
 
 /**
- * Middleware to ensure the admin's dashboard exists
+ * Middleware to ensure the dashboard exists for the authenticated admin.
+ * If it doesn't exist, create a new dashboard with default values (all zero).
  */
 const ensureDashboardExists = async (req, res, next) => {
   try {
-    const adminId = req.user.id; // Assuming req.user is set by authenticateAdmin middleware
+    const adminId = req.user.id; // Assuming `req.user` is populated by `authenticateAdmin`
 
     // Check if a dashboard exists for the admin
-    let dashboard = await AdminDashboard.findOne({ admin: adminId });
-
-    // If no dashboard exists, create one
+    let dashboard = await Dashboard.findOne({ userId: adminId });
     if (!dashboard) {
-      dashboard = new AdminDashboard({
-        admin: adminId,
-        posts: 0,
-        comments: 0,
-        // Add other initial dashboard properties as needed
+      // Create a new dashboard with default values
+      dashboard = new Dashboard({
+        userId: adminId,
+        posts: 0, // Explicitly set to zero
+        comments: 0, // Explicitly set to zero
+        lastUpdated: null, // Explicitly set to null
       });
-
       await dashboard.save();
     }
 
-    req.dashboard = dashboard; // Attach the dashboard to the request object
-    next(); // Proceed to the next middleware or route handler
+    // Attach the dashboard to the request object for downstream usage
+    req.dashboard = dashboard;
+    next();
   } catch (error) {
-    console.error('Error ensuring admin dashboard exists:', error.message);
-    res.status(500).json({ status: 'error', msg: 'Error processing dashboard' });
+    console.error('Error ensuring dashboard exists:', error.message);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error ensuring dashboard exists',
+    });
   }
 };
 

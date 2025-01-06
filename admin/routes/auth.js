@@ -58,8 +58,8 @@ router.post('/signup', async (req, res) => {
         } 
 
            // Restrict admin signups based on the ADMIN_EMAILS list
-    if (ADMIN_EMAILS.includes(email)) {
-        const adminCount = await User.countDocuments({ email: { $in: ADMIN_EMAILS } });
+    if (email.includes(email)){
+        const adminCount = await User.countDocuments({ email: { $in:email} });
         if (adminCount >= 2) {
           return res.status(400).json({
             status: 'error',

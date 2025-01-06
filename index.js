@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 dotenv.config();
 const cors = require('cors')
 const path = require('path')
-
+swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs')
+const swaggerDocument = YAML.load('./swagger.yaml'); 
 
 
 const app = express();
@@ -35,6 +37,9 @@ con.on('disconnected', error => {
 // parse Json data coming in the request body 
 app.use(express.json());
 app.use(cors());
+
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Serve static files from the 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

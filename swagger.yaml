@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: Admin Authentication API
+  description: API for admin user authentication, including signup, login, password reset, and logout functionality.
+  version: 1.0.0
+  contact:
+    name: Developer Support
+    email: support@example.com
+    url: https://example.com/support
+servers:
+ - url: https://my-blog-2vl8.onrender.com
+    description: Online Render server
+
+paths:
+  /auth/signup:
+    post:
+      summary: Sign up a new user
+      description: Allows a user to create a new account.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: The email of the new user.
+                  example: user@example.com
+                password:
+                  type: string
+                  description: The password for the new user.
+                  example: Password123!
+                confirmPassword:
+                  type: string
+                  description: The password confirmation.
+                  example: Password123!
+      responses:
+        '201':
+          description: User signed up successfully.
+        '400':
+          description: Bad request (e.g., email already exists, passwords don't match).
+        '500':
+          description: Internal server error.
+        '400':
+          description: restricted access(only two admin can signup)
+
+  /auth/login:
+    post:
+      summary: Login a user
+      description: Allows a user to log in and obtain a JWT token.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: The email of the user.
+                  example: user@example.com
+                password:
+                  type: string
+                  description: The user's password.
+                  example: Password123!
+      responses:
+        '200':
+          description: Login successful.
+        '400':
+          description: Incorrect email or password.
+        '500':
+          description: Internal server error.
+
+  /auth/forgot-password:
+    post:
+      summary: Forgot Password
+      description: Sends an OTP to the user's email for password recovery.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+      responses:
+        '200':
+          description: OTP sent to email
+        '400':
+          description: Invalid email or bad request
+        '404':
+          description: User not found
+        '500':
+          description: Failed to send OTP
+
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP
+      description: Verifies the OTP sent to the user's email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+              properties:
+                otp:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: OTP verified successfully
+        '400':
+          description: Invalid or expired OTP
+        '500':
+          description: Internal server error
+
+  /auth/reset-password/{token}:
+    post:
+      summary: Reset Password
+      description: Resets the user's password using a valid token.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: JWT token sent to the user's email for password reset
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newPassword
+              properties:
+                newPassword:
+                  type: string
+                  example: NewSecureP@ssw0rd
+      responses:
+        '200':
+          description: Password successfully reset
+        '400':
+          description: Invalid or expired token
+        '500':
+          description: Internal server error
+
+  /auth/logout:
+    post:
+      summary: User Logout
+      description: Logs the user out by invalidating their JWT token and marking them offline.
+      responses:
+        '200':
+          description: Successfully logged out
+        '401':
+          description: No token provided or user not authenticated
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        msg:
+          type: string
+          example: An error occurred
+    UserResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        msg:
+          type: string
+          example: You have successfully logged in
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+              example: user@example.com
+            role:
+              type: string
+              example: admin
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...

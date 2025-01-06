@@ -8,7 +8,9 @@ info:
     email: support@example.com
     url: https://example.com/support
 servers:
- - url: https://my-blog-2vl8.onrender.com
+  - url: http://localhost:2670
+    description: Local development server
+  - url: https://my-blog-2vl8.onrender.com
     description: Online Render server
 
 paths:
@@ -42,10 +44,10 @@ paths:
           description: User signed up successfully.
         '400':
           description: Bad request (e.g., email already exists, passwords don't match).
+        '403':
+          description: Restricted access (only two admins can sign up).
         '500':
           description: Internal server error.
-        '400':
-          description: restricted access(only two admin can signup)
 
   /auth/login:
     post:

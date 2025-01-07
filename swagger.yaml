@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Admin Authentication API
-  description: API for admin user authentication, including signup, login, password reset, and logout functionality.
+  description: API for admin user authentication, including signup, login, password reset, logout functionality, and comment management.
   version: 1.0.0
   contact:
     name: Developer Support
@@ -82,6 +82,8 @@ paths:
     post:
       summary: Forgot Password
       description: Sends an OTP to the user's email for password recovery.
+      tags:
+        - Authentication
       requestBody:
         required: true
         content:
@@ -96,18 +98,20 @@ paths:
                   example: user@example.com
       responses:
         '200':
-          description: OTP sent to email
+          description: OTP sent to email.
         '400':
-          description: Invalid email or bad request
+          description: Invalid email or bad request.
         '404':
-          description: User not found
+          description: User not found.
         '500':
-          description: Failed to send OTP
+          description: Failed to send OTP.
 
   /auth/verify-otp:
     post:
       summary: Verify OTP
       description: Verifies the OTP sent to the user's email.
+      tags:
+        - Authentication
       requestBody:
         required: true
         content:
@@ -122,21 +126,23 @@ paths:
                   example: "123456"
       responses:
         '200':
-          description: OTP verified successfully
+          description: OTP verified successfully.
         '400':
-          description: Invalid or expired OTP
+          description: Invalid or expired OTP.
         '500':
-          description: Internal server error
+          description: Internal server error.
 
   /auth/reset-password/{token}:
     post:
       summary: Reset Password
       description: Resets the user's password using a valid token.
+      tags:
+        - Authentication
       parameters:
         - name: token
           in: path
           required: true
-          description: JWT token sent to the user's email for password reset
+          description: JWT token sent to the user's email for password reset.
           schema:
             type: string
       requestBody:
@@ -153,23 +159,240 @@ paths:
                   example: NewSecureP@ssw0rd
       responses:
         '200':
-          description: Password successfully reset
+          description: Password successfully reset.
         '400':
-          description: Invalid or expired token
+          description: Invalid or expired token.
         '500':
-          description: Internal server error
+          description: Internal server error.
 
   /auth/logout:
     post:
       summary: User Logout
       description: Logs the user out by invalidating their JWT token and marking them offline.
+      tags:
+        - Authentication
       responses:
         '200':
-          description: Successfully logged out
+          description: Successfully logged out.
         '401':
-          description: No token provided or user not authenticated
+          description: No token provided or user not authenticated.
         '500':
-          description: Internal server error
+          description: Internal server error.
+
+  /comment/{postId}:
+    post:
+      summary: Create a new comment
+      description: Adds a new comment to a specific blog post.
+      tags:
+        - Comments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: The ID of the blog post to which the comment belongs.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: The content of the comment.
+                  example: This is a great blog post!
+      responses:
+        '201':
+          description: Comment created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Comment created successfully
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: Bad request (e.g., content is missing).
+        '404':
+          description: Post not found.
+        '500':
+          description: Server error.
+
+  /comments/{postId}:
+    get:
+      summary: Fetch all comments for a specific post
+      description: Retrieves all comments associated with a specific blog post.
+      tags:
+        - Comments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: The ID of the blog post whose comments are being fetched.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          description: Post not found.
+        '500':
+          description: Server error.
+
+  /comment/{commentId}:
+    delete:
+      summary: Delete a comment by ID (admin only)
+      description: Deletes a comment by its ID. Only admins are authorized to perform this action.
+      tags:
+        - Comments
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          description: The ID of the comment to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Comment deleted successfully
+        '401':
+          description: Unauthorized access.
+        '404':
+          description: Comment not found.
+        '500':
+          description: Server error.
+  /blogPost:
+    post:
+      summary: Create a new blog post (admin only)
+      description: Allows an admin user to create a new blog post with an optional image or video upload.
+      tags:
+        - Blog Posts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: The title of the blog post.
+                  example: "Latest Football Updates"
+                description:
+                  type: string
+                  description: The description of the blog post.
+                  example: "This is an update about recent football matches."
+                category:
+                  type: string
+                  description: The category of the blog post.
+                  example: football
+                  enum: [npfl, football, basketball, tennis, formula-one]
+                image:
+                  type: string
+                  format: binary
+                  description: Optional image file for the blog post.
+                video:
+                  type: string
+                  format: binary
+                  description: Optional video file for the blog post.
+      responses:
+        '201':
+          description: Blog post created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Blog post created successfully.
+                  post:
+                    $ref: '#/components/schemas/BlogPost'
+        '400':
+          description: Bad request. Missing required fields or invalid category.
+        '401':
+          description: Unauthorized. Admin privileges are required.
+        '500':
+          description: Internal server error.
+         
+  /blogsPost:
+    get:
+      summary: Fetch all blog posts
+      description: Retrieves all blog posts sorted by recency, with optional category filtering.
+      tags:
+        - Blog Posts
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Filter posts by category (e.g., football, basketball, tennis, etc.). Use "all" to fetch all posts.
+          schema:
+            type: string
+            example: football
+      responses:
+        '200':
+          description: List of blog posts retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlogPost'
+        '400':
+          description: Invalid category.
+        '500':
+          description: Internal server error.
+  /blogsPost/{category}:
+    get:
+      summary: Fetch blog posts by specific category
+      description: Retrieves all blog posts for a specific category, sorted by recency.
+      tags:
+        - Blog Posts
+      parameters:
+        - name: category
+          in: path
+          required: true
+          description: The category of the blog posts to fetch (e.g., football, basketball, etc.).
+          schema:
+            type: string
+            example: football
+            enum: [npfl, football, basketball, tennis, formula-one]
+      responses:
+        '200':
+          description: List of blog posts retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlogPost'
+        '400':
+          description: Invalid category.
+        '500':
+          description: Internal server error.
 
 components:
   schemas:
@@ -181,7 +404,7 @@ components:
           example: error
         msg:
           type: string
-          example: An error occurred
+          example: An error occurred.
     UserResponse:
       type: object
       properties:
@@ -190,7 +413,7 @@ components:
           example: success
         msg:
           type: string
-          example: You have successfully logged in
+          example: You have successfully logged in.
         user:
           type: object
           properties:
@@ -203,3 +426,60 @@ components:
         token:
           type: string
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 64a1234567bc89def1234567
+        content:
+          type: string
+          example: This is a comment.
+        post:
+          type: string
+          example: 64a9876543bc21def9876543
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-01-07T14:30:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2025-01-07T15:30:00.000Z
+          
+components:
+  schemas:
+    BlogPost:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "64a1234567bc89def1234567"
+        title:
+          type: string
+          example: "Latest Football Updates"
+        description:
+          type: string
+          example: "This is an update about recent football matches."
+        category:
+          type: string
+          example: football
+        image:
+          type: string
+          example: image1.jpg
+        video:
+          type: string
+          example: video1.mp4
+        createdBy:
+          type: string
+          example: "64a9876543bc21def9876543"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-01-07T14:30:00.000Z"
+securitySchemes:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT

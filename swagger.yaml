@@ -393,6 +393,17 @@ paths:
           description: Invalid category.
         '500':
           description: Internal server error.
+  /blogpost/{postId}:
+   delete:
+    summary: Delete a blog post
+    description: Deletes a blog post by its ID.
+    tags:
+      - Blog Posts
+    parameters:
+      - name: postId
+        in: path
+        description: ID of the blog post to delete
+        required: true
 
 components:
   schemas:
@@ -447,9 +458,6 @@ components:
           type: string
           format: date-time
           example: 2025-01-07T15:30:00.000Z
-          
-components:
-  schemas:
     BlogPost:
       type: object
       properties:

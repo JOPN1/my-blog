@@ -45,7 +45,7 @@ router.post('/blogPost', authenticateAdmin ,upload.fields([{ name: 'image' }, { 
   }
 );
 
-// Fetch all blog posts sorted by recency, with optional category filtering
+// Fetch all blog posts sorted by recency, with optional category filtering and pagination
 router.get('/blogsPost', validateCategory, async (req, res) => {
   const { category } = req.query;
 
@@ -74,6 +74,26 @@ router.get('/blogsPost/:category', async (req, res) => {
   try {
     const posts = await Post.find({ category: category.toLowerCase() }).sort({ createdAt: -1 });
     res.status(200).json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//delete post by specific Id
+
+router.delete('/blogpost/:postId', async (req, res) => {
+  const { postId } = req.params;
+  try {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Delete the document
+    await post.remove();
+    res.status(200).json({ message: 'Post deleted successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
